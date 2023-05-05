@@ -3,11 +3,15 @@ import find from 'lodash/find';
 export interface PerfRequestOptions {
   cacheKey?: string;
 }
+export interface ObjectType {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any;
+}
 
 const requesting: { [key: string]: Promise<void> } = {};
-const cache: { data: ObjectInterface; cacheKey?: string }[] = [];
+const cache: { data: ObjectType; cacheKey?: string }[] = [];
 
-function setCache(cacheKey: string, data: ObjectInterface) {
+function setCache(cacheKey: string, data: ObjectType) {
   const item = find(cache, (v) => v.cacheKey === cacheKey);
   if (item) {
     item.data = data;
