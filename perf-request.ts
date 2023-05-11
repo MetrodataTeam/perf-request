@@ -8,7 +8,7 @@ export interface ObjectType {
   [key: string]: any;
 }
 
-const requesting: { [key: string]: Promise<void> } = {};
+const requesting: { [key: string]: Promise<void> | null } = {};
 const cache: { data: ObjectType; cacheKey?: string }[] = [];
 
 function setCache(cacheKey: string, data: ObjectType) {
@@ -36,11 +36,15 @@ async function perfRequest(service: () => Promise<any>, options?: PerfRequestOpt
   const data = getCache(cacheKey);
   if (data) return data; //缓存数据
   const pms = requesting[cacheKey || ''];
+  //公用同一个缓存的promise
   if (pms) return await pms;
   const promise = service();
   //cacheKey决定是否缓存pending状态
   if (cacheKey) {
     requesting[cacheKey] = promise;
+    promise.finally(() => {
+      requesting[cacheKey] = null;
+    });
   }
   const res = await promise;
   //cacheKey决定是否缓存数据
