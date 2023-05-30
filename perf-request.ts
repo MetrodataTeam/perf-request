@@ -33,8 +33,11 @@ function getCache(cacheKey?: string) {
 async function perfRequest(service: () => Promise<any>, options?: PerfRequestOptions) {
   if (!service) return;
   const { cacheKey } = options || {};
-  const data = getCache(cacheKey);
-  if (data) return data; //缓存数据
+  //当没有接口在pending时，刷新缓存数据
+  if (find(requesting, (v) => !!v)) {
+    const data = getCache(cacheKey);
+    if (data) return data; //缓存数据
+  }
   const pms = requesting[cacheKey || ''];
   //公用同一个缓存的promise
   if (pms) return await pms;
