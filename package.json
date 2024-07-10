@@ -1,5 +1,5 @@
 {
-  "name": "perf-request",
+  "name": "@mdt/perf-request",
   "version": "1.1.2",
   "description": "`npm install perf-request`",
   "main": "lib/index.js",
