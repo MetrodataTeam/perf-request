@@ -1,6 +1,6 @@
 {
   "name": "@datlas/perf-request",
-  "version": "1.1.3",
+  "version": "1.1.4",
   "description": "`npm install perf-request`",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -24,7 +24,9 @@
   },
   "homepage": "https://github.com/Kevin2cqs/perf-request#readme",
   "dependencies": {
+    "@types/axios": "^0.14.0",
     "@types/lodash": "^4.14.195",
+    "axios": "^0.19.2",
     "lodash": "^4.17.21"
   },
   "devDependencies": {
