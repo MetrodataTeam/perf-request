@@ -36,13 +36,20 @@ export function deleteCache(cacheKey?: string) {
   if (index >= 0) {
     cache.splice(index, 1);
   }
-  requesting[cacheKey!] = null;
-  requestMap[cacheKey!] = [];
+  requesting[cacheKey || ''] = null;
+  requestMap[cacheKey || ''] = [];
+}
+
+function removeRequestMapId(cacheKey: string, requestId: string) {
+  requestMap[cacheKey] = requestMap[cacheKey] || [];
+  const index = requestMap[cacheKey].indexOf(requestId);
+  if (index >= 0) {
+    requestMap[cacheKey].splice(index, 1);
+  }
 }
 
 export function cancelRequest(cacheKey: string, requestId: string) {
-  requestMap[cacheKey] = requestMap[cacheKey] || [];
-  requestMap[cacheKey] = requestMap[cacheKey].filter((v) => v !== requestId);
+  removeRequestMapId(cacheKey, requestId);
   requesting[cacheKey] = null;
   if (requestMap[cacheKey].length === 0) {
     deleteCache(cacheKey);
@@ -50,11 +57,7 @@ export function cancelRequest(cacheKey: string, requestId: string) {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function perfRequest(
-  service: () => Promise<any>,
-  options?: PerfRequestOptions,
-  retry?: boolean,
-) {
+async function perfRequest(service: () => Promise<any>, options?: PerfRequestOptions) {
   if (!service) return;
   const { cacheKey, requestId } = options || {};
   //当没有接口在pending时，刷新缓存数据
@@ -64,46 +67,36 @@ async function perfRequest(
     if (data) return data; //缓存数据
   }
   requestMap[cacheKey || ''] = requestMap[cacheKey || ''] || [];
-  requestMap[cacheKey || ''].push(requestId!);
+  requestMap[cacheKey || ''].push(requestId || '');
+
+  const getPromise = (sp: Promise<any>): Promise<any> => {
+    return new Promise((resolve, reject) => {
+      sp.then(resolve).catch(async (error) => {
+        if (error?.__CANCEL__) {
+          if (requestMap[cacheKey || ''].includes(requestId || '')) {
+            const res = await perfRequest(service, options);
+            return resolve(res);
+          }
+          reject(error);
+        } else {
+          reject(error);
+        }
+      });
+    }).finally(() => {
+      removeRequestMapId(cacheKey || '', requestId || '');
+    });
+  };
+
   //公用同一个缓存的promise
   if (pms) {
-    return new Promise((resolve, reject) => {
-      pms.then(resolve).catch(async (error) => {
-        if (error?.__CANCEL__) {
-          if (requestMap[cacheKey!].includes(requestId!)) {
-            const res = await perfRequest(service, options, true);
-            return resolve(res);
-          }
-          reject(error);
-        } else {
-          reject(error);
-        }
-      });
-    });
+    return getPromise(pms);
   }
-  const promise: Promise<any> = new Promise((resolve, reject) => {
-    service()
-      .then(resolve)
-      .catch(async (error) => {
-        if (error?.__CANCEL__) {
-          if (requestMap[cacheKey!].includes(requestId!)) {
-            const res = await perfRequest(service, options, true);
-            return resolve(res);
-          }
-          reject(error);
-        } else {
-          reject(error);
-        }
-      });
-  });
+  const promise = service();
   //cacheKey决定是否缓存pending状态
   if (cacheKey && promise instanceof Promise) {
     requesting[cacheKey] = promise;
-    promise.finally(() => {
-      deleteCache(cacheKey);
-    });
   }
-  const res = await promise;
+  const res = await getPromise(promise);
   //cacheKey决定是否缓存数据
   if (cacheKey) {
     setCache(cacheKey, res);
