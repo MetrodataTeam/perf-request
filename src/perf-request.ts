@@ -29,6 +29,14 @@ function getCache(cacheKey?: string) {
   return item.data;
 }
 
+export function deleteCache(cacheKey?: string) {
+  const index = cache.findIndex((v) => v.cacheKey === cacheKey);
+  if (index >= 0) {
+      cache.splice(index, 1);
+  }
+  requesting[cacheKey!] = null;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function perfRequest(service: () => Promise<any>, options?: PerfRequestOptions) {
   if (!service) return;
