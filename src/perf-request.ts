@@ -68,18 +68,14 @@ async function perfRequest(
   //当没有接口在pending时，刷新缓存数据
   const pms = requesting[cacheKey || ''];
   if (pms) {
-    if (cacheKey?.includes('31bad12f')) {
-      console.log('cachekey 333', cacheKey);
-    }
+   
     const data = getCache(cacheKey);
     if (data) return data; //缓存数据
   }
   requestMap[cacheKey || ''] = requestMap[cacheKey || ''] || [];
   requestMap[cacheKey || ''].push(requestId || '');
 
-  if (cacheKey?.includes('31bad12f')) {
-    console.trace('cachekey 000 ', cacheKey, retry);
-  }
+ 
   const getPromise = (sp: Promise<any>): Promise<any> => {
     return new Promise(async (resolve, reject) => {
       let res;
@@ -95,9 +91,7 @@ async function perfRequest(
         }
         return reject(error);
       }
-      if (cacheKey?.includes('31bad12f')) {
-        console.log('cachekey res:', cloneDeep(res));
-      }
+     
       return resolve(cloneDeep(res));
     }).finally(() => {
       removeRequestMapId(cacheKey || '', requestId || '');
@@ -107,9 +101,7 @@ async function perfRequest(
 
   //公用同一个缓存的promise
   if (pms) {
-    if (cacheKey?.includes('31bad12f')) {
-      console.log('cachekey 1111', cacheKey);
-    }
+    
     return getPromise(pms);
   }
   const promise = service().then((res) => {
@@ -120,16 +112,11 @@ async function perfRequest(
   });
   //cacheKey决定是否缓存pending状态
   if (cacheKey && promise instanceof Promise) {
-    if (cacheKey.includes('31bad12f')) {
-      console.log('cachekey 2222', cacheKey);
-    }
+    
     requesting[cacheKey] = promise;
   }
   const res = await getPromise(promise);
   //cacheKey决定是否缓存数据
-  if (cacheKey?.includes('31bad12f')) {
-    console.log('cachekey res2:', cloneDeep(res));
-  }
 
   return res;
 }
