@@ -37,6 +37,7 @@ export function deleteCache(cacheKey?: string) {
     cache.splice(index, 1);
   }
   requesting[cacheKey!] = null;
+  requestMap[cacheKey!] = [];
 }
 
 export function cancelRequest(cacheKey: string, requestId: string) {
@@ -99,7 +100,7 @@ async function perfRequest(
   if (cacheKey && promise instanceof Promise) {
     requesting[cacheKey] = promise;
     promise.finally(() => {
-      requesting[cacheKey] = null;
+      deleteCache(cacheKey);
     });
   }
   const res = await promise;
