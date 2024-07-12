@@ -1,3 +1,4 @@
+import cloneDeep from 'lodash/cloneDeep';
 import find from 'lodash/find';
 
 export interface PerfRequestOptions {
@@ -46,18 +47,22 @@ function removeRequestMapId(cacheKey: string, requestId: string) {
   if (index >= 0) {
     requestMap[cacheKey].splice(index, 1);
   }
-}
-
-export function cancelRequest(cacheKey: string, requestId: string) {
-  removeRequestMapId(cacheKey, requestId);
-  requesting[cacheKey] = null;
   if (requestMap[cacheKey].length === 0) {
     deleteCache(cacheKey);
   }
 }
 
+export function cancelRequest(cacheKey: string, requestId: string) {
+  removeRequestMapId(cacheKey, requestId);
+  requesting[cacheKey] = null;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function perfRequest(service: () => Promise<any>, options?: PerfRequestOptions) {
+async function perfRequest(
+  service: () => Promise<any>,
+  options?: PerfRequestOptions,
+  retry?: boolean,
+) {
   if (!service) return;
   const { cacheKey, requestId } = options || {};
   //当没有接口在pending时，刷新缓存数据
@@ -69,38 +74,49 @@ async function perfRequest(service: () => Promise<any>, options?: PerfRequestOpt
   requestMap[cacheKey || ''] = requestMap[cacheKey || ''] || [];
   requestMap[cacheKey || ''].push(requestId || '');
 
+  // console.trace('cachekey 000 ', cacheKey, retry);
   const getPromise = (sp: Promise<any>): Promise<any> => {
-    return new Promise((resolve, reject) => {
-      sp.then(resolve).catch(async (error) => {
-        if (error?.__CANCEL__) {
+    return new Promise(async (resolve, reject) => {
+      let res;
+      try {
+        const pres = await sp;
+        res = getCache(cacheKey || '') || pres;
+      } catch (error) {
+        if ((error as any)?.__CANCEL__) {
           if (requestMap[cacheKey || ''].includes(requestId || '')) {
-            const res = await perfRequest(service, options);
-            return resolve(res);
+            return await perfRequest(service, options, true);
+            // return resolve(res);
           }
-          reject(error);
-        } else {
-          reject(error);
         }
-      });
+        return reject(error);
+      }
+      // console.log('cachekey res:', cloneDeep(res));
+      return resolve(cloneDeep(res));
     }).finally(() => {
       removeRequestMapId(cacheKey || '', requestId || '');
+      // requesting[cacheKey || ''] = null;
     });
   };
 
   //公用同一个缓存的promise
   if (pms) {
+    // console.log('cachekey 1111', cacheKey);
     return getPromise(pms);
   }
-  const promise = service();
+  const promise = service().then((res) => {
+    if (cacheKey) {
+      setCache(cacheKey, res);
+    }
+    return res;
+  });
   //cacheKey决定是否缓存pending状态
   if (cacheKey && promise instanceof Promise) {
+    // console.log('cachekey 2222', cacheKey);
     requesting[cacheKey] = promise;
   }
   const res = await getPromise(promise);
   //cacheKey决定是否缓存数据
-  if (cacheKey) {
-    setCache(cacheKey, res);
-  }
+  // console.log('cachekey res2:', cloneDeep(res));
 
   return res;
 }
