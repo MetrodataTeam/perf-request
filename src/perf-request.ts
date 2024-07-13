@@ -68,14 +68,14 @@ async function perfRequest(
   //当没有接口在pending时，刷新缓存数据
   const pms = requesting[cacheKey || ''];
   if (pms) {
-   
     const data = getCache(cacheKey);
     if (data) return data; //缓存数据
   }
-  requestMap[cacheKey || ''] = requestMap[cacheKey || ''] || [];
-  requestMap[cacheKey || ''].push(requestId || '');
+  if (cacheKey) {
+    requestMap[cacheKey] = requestMap[cacheKey] || [];
+    requestMap[cacheKey].push(requestId || '');
+  }
 
- 
   const getPromise = (sp: Promise<any>): Promise<any> => {
     return new Promise(async (resolve, reject) => {
       let res;
@@ -84,14 +84,14 @@ async function perfRequest(
         res = getCache(cacheKey || '') || pres;
       } catch (error) {
         if ((error as any)?.__CANCEL__) {
-          if (requestMap[cacheKey || ''].includes(requestId || '')) {
+          if (cacheKey && requestMap[cacheKey].includes(requestId || '')) {
             const res = await perfRequest(service, options, true);
             return resolve(res);
           }
         }
         return reject(error);
       }
-     
+
       return resolve(cloneDeep(res));
     }).finally(() => {
       removeRequestMapId(cacheKey || '', requestId || '');
@@ -101,7 +101,6 @@ async function perfRequest(
 
   //公用同一个缓存的promise
   if (pms) {
-    
     return getPromise(pms);
   }
   const promise = service().then((res) => {
@@ -112,7 +111,6 @@ async function perfRequest(
   });
   //cacheKey决定是否缓存pending状态
   if (cacheKey && promise instanceof Promise) {
-    
     requesting[cacheKey] = promise;
   }
   const res = await getPromise(promise);
