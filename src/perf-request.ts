@@ -1,9 +1,11 @@
 import cloneDeep from 'lodash/cloneDeep';
 import find from 'lodash/find';
+import axios from 'axios';
 
 export interface PerfRequestOptions {
   cacheKey?: string;
   requestId?: string;
+  CancelError?: any;
 }
 export interface ObjectType {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -61,10 +63,9 @@ export function cancelRequest(cacheKey: string, requestId: string) {
 async function perfRequest(
   service: () => Promise<any>,
   options?: PerfRequestOptions,
-  retry?: boolean,
 ) {
   if (!service) return;
-  const { cacheKey, requestId } = options || {};
+  const { cacheKey, requestId, CancelError } = options || {};
   //当没有接口在pending时，刷新缓存数据
   const pms = requesting[cacheKey || ''];
   if (pms) {
@@ -81,11 +82,17 @@ async function perfRequest(
       let res;
       try {
         const pres = await sp;
+        if (cacheKey && getCache(cacheKey) && !requestMap[cacheKey].includes(requestId || '')) {
+          if (CancelError) {
+            throw new CancelError();
+          }
+          throw new axios.Cancel();
+        }
         res = getCache(cacheKey || '') || pres;
       } catch (error) {
         if ((error as any)?.__CANCEL__) {
           if (cacheKey && requestMap[cacheKey].includes(requestId || '')) {
-            const res = await perfRequest(service, options, true);
+            const res = await perfRequest(service, options);
             return resolve(res);
           }
         }
@@ -115,7 +122,6 @@ async function perfRequest(
   }
   const res = await getPromise(promise);
   //cacheKey决定是否缓存数据
-
   return res;
 }
 
