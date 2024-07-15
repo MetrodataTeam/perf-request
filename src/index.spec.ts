@@ -86,12 +86,12 @@ describe('index', () => {
     const service2 = () => service({ cancelToken: token2 });
     const ps1 = perfRequest(service1, { cacheKey: 'cacheKey', requestId: 'requestId' });
     const ps2 = perfRequest(service2, { cacheKey: 'cacheKey', requestId: 'requestId2' });
-    token1.callback = () => {
+    token1.promise.then(() => {
       cancelRequest('cacheKey', 'requestId');
-    };
-    token2.callback = () => {
+    });
+    token2.promise.then(() => {
       cancelRequest('cacheKey', 'requestId2');
-    }
+    });
     setTimeout(() => {
       tokenSource.cancel();
       cancelRequest('cacheKey', 'requestId');
@@ -116,12 +116,12 @@ describe('index', () => {
     const service2 = () => service({ cancelToken: token2 });
     const ps1 = perfRequest(service1, { cacheKey: 'cacheKey', requestId: 'requestId' });
     const ps2 = perfRequest(service2, { cacheKey: 'cacheKey', requestId: 'requestId2' });
-    token1.callback = () => {
+    token1.promise.then(() => {
       cancelRequest('cacheKey', 'requestId');
-    };
-    token2.callback = () => {
+    });
+    token2.promise.then(() => {
       cancelRequest('cacheKey', 'requestId2');
-    }
+    });
     setTimeout(() => {
       tokenSource2.cancel();
     }, 500);
