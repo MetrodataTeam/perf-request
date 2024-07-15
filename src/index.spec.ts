@@ -1,25 +1,8 @@
 import perfRequest, {cancelRequest} from './index';
-import axios from 'axios';
+import axios, {CancelToken} from 'axios';
 
-class MdtCancelToken extends axios.CancelToken {
-  cancelToken: any;
-  callback?: () => void;
-
-  static source() {
-    let cancel: any;
-    const ct = new MdtCancelToken((c) => {
-      cancel = c;
-    });
-    return {
-      token: ct,
-      cancel: (...args: any[]) => {
-        cancel?.(...args);
-        ct.callback?.();
-      },
-    };
-  }
-}
-
+type MdtCancelToken = CancelToken;
+const MdtCancelToken = axios.CancelToken;
 
 const mockService = () => {
   let reqid = 1;
